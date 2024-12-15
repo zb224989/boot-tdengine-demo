@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cn.ethan.tdengine.example.dao.DeviceMonitorMapper">
+
+    <resultMap id="BaseResultMap" type="cn.ethan.tdengine.example.domain.DeviceMonitor">
+        <id column="ts" jdbcType="TIMESTAMP" property="ts"/>
+        <result column="temperature" jdbcType="FLOAT" property="temperature"/>
+        <result column="humidity" jdbcType="FLOAT" property="humidity"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+          ts,temperature,humidity,current,voltage
+    </sql>
+
+    <update id="dropDB">
+        drop database if exists demo
+    </update>
+
+    <update id="createDB">
+        create database if not exists demo
+    </update>
+
+    <update id="createSuperTable">
+        CREATE STABLE if not exists demo.device_monitoring (
+          ts TIMESTAMP,
+          temperature FLOAT,
+          humidity FLOAT,
+          current FLOAT,
+          voltage FLOAT
+        ) TAGS (
+          factory_id INT,
+          workshop_id INT,
+          device_id VARCHAR(50)
+        );
+    </update>
+
+    <update id="createTable" parameterType="cn.ethan.tdengine.example.domain.DeviceMonitor">
+        create table if not exists demo.device_#{deviceId} using demo.device_monitoring tags(#{factoryId},#{workshopId},#{deviceId})
+    </update>
+
+    <select id="select" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List"/>
+        from demo.device_monitoring order by ts desc
+        <if test="limit != null">
+            limit #{limit,jdbcType=BIGINT}
+        </if>
+        <if test="offset != null">
+            offset #{offset,jdbcType=BIGINT}
+        </if>
+    </select>
+
+    <insert id="insert" parameterType="cn.ethan.tdengine.example.domain.DeviceMonitor">
+        insert into demo.device_#{deviceId} (ts, temperature, humidity,current,voltage) values
+                     (now, ${temperature}, ${humidity},${current}, ${voltage})
+    </insert>
+
+    <insert id="insertBatch" parameterType="java.util.List">
+        insert into
+        <foreach separator=" " collection="list" item="deviceMonitor" index="index">
+            demo.device_a001 values
+            (#{deviceMonitor.ts}, #{deviceMonitor.temperature}, #{deviceMonitor.humidity})
+        </foreach>
+    </insert>
+
+    <select id="getSubTables" resultType="String">
+        select tbname from demo.device_monitoring
+    </select>
+
+    <select id="count" resultType="int">
+        select count(*) from demo.device_a001
+    </select>
+
+    <resultMap id="avgResultSet" type="cn.ethan.tdengine.example.domain.DeviceMonitor">
+        <id column="ts" jdbcType="TIMESTAMP" property="ts"/>
+        <result column="avg(temperature)" jdbcType="FLOAT" property="temperature"/>
+        <result column="avg(humidity)" jdbcType="FLOAT" property="humidity"/>
+    </resultMap>
+
+    <select id="avg" resultMap="avgResultSet">
+        select avg(temperature), avg(humidity)from demo.device_monitoring WHERE workshop_id = 1 AND ts > NOW - 1h;
+    </select>
+
+</mapper>
